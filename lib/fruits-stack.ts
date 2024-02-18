@@ -41,10 +41,20 @@ export class FruitsStack extends cdk.Stack {
       ...nodeJsFunctionProps,
     });
 
+    const getAllFruitsLambda = new NodejsFunction(this, 'getAllFruitsFunction', {
+      entry: join('lambdas', 'get-all-fruits.ts'),
+      ...nodeJsFunctionProps,
+    });
+
     const createFruitLambda = new NodejsFunction(this, 'createFruitFunction', {
       entry: join('lambdas', 'create-fruit.ts'),
       ...nodeJsFunctionProps,
     });
+
+    const updateFruitLambda = new NodejsFunction(this, 'updateFruitFunction', {
+      entry: join('lambdas', 'update-fruit.ts'),
+      ...nodeJsFunctionProps,
+    })
 
     const deleteFruitLambda = new NodejsFunction(this, 'deleteFruitFunction', {
       entry: join('lambdas', 'delete-fruit.ts'),
@@ -55,24 +65,32 @@ export class FruitsStack extends cdk.Stack {
     dynamoTable.grantReadWriteData(getFruitLambda);
     dynamoTable.grantReadWriteData(createFruitLambda);
     dynamoTable.grantReadWriteData(deleteFruitLambda);
+    dynamoTable.grantReadWriteData(getAllFruitsLambda);
+    dynamoTable.grantReadWriteData(updateFruitLambda);
 
     //Integrate Lambda functions with API Gateway resource
     const getFruitIntegration = new LambdaIntegration(getFruitLambda);
     const createFruitIntegration = new LambdaIntegration(createFruitLambda);
     const deleteFruitIntegration = new LambdaIntegration(deleteFruitLambda);
+    const getAllFruitsIntegration = new LambdaIntegration(getAllFruitsLambda);
+    const updateFruitIntegration = new LambdaIntegration(updateFruitLambda);
 
     //Create an API Gateway resource for each operation
     const api = new RestApi(this, 'fruitsApi', {
       restApiName: 'Fruits Service'
     });
 
-    const singleFruits = api.root.addResource('{id}');
-    singleFruits.addMethod('GET', getFruitIntegration);
-    singleFruits.addMethod('DELETE', deleteFruitIntegration);
+    const singleFruits = api.root.addResource('fruit');
+    const idResource = singleFruits.addResource('{id}');
+    idResource.addMethod('GET', getFruitIntegration);
+    idResource.addMethod('DELETE', deleteFruitIntegration);
+    idResource.addMethod('PUT', updateFruitIntegration);
     addCorsOptions(singleFruits);
+    addCorsOptions(idResource);
     
     const fruits = api.root.addResource('fruits');
     fruits.addMethod('POST', createFruitIntegration);
+    fruits.addMethod('GET', getAllFruitsIntegration);
     addCorsOptions(fruits);
   }
 }
